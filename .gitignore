@@ -1,0 +1,40 @@
+# ---------- Python / Backend ----------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+*.env
+.env.local
+
+# ---------- Node / Frontend ----------
+node_modules/
+frontend/dist/
+frontend/build/
+.npm/
+.eslintcache
+
+# ---------- Database ----------
+*.db
+*.sqlite3
+
+# ---------- ML models (usually large binary files) ----------
+ml_models/**/*.pkl
+ml_models/**/*.h5
+ml_models/**/*.joblib
+
+# ---------- Data (raw/processed can be large or sensitive) ----------
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# ---------- OS / Editor junk ----------
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ---------- Logs ----------
+*.log
