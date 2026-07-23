@@ -1,2 +1,2 @@
-# agentic-facilityOPS-AI-Platform
+# Agentic-facilityOPS-AI-Platform
 Infosys Internship - Team A
