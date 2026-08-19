@@ -8,7 +8,7 @@
 
 ## Overview
 
-This milestone delivers an end-to-end vertical slice of the platform for a single module (Energy) across the full stack: raw data → relational database → agent logic (analytics + recommendations) → API → dashboard UI. This structure is the pattern the rest of the team will replicate for the Maintenance, Occupancy, Security, and Cost modules in later milestones.
+This milestone delivers an end-to-end vertical slice of the platform for a single module (Energy) across the full stack: raw data → relational database → agent logic (analytics + recommendations) → API → dashboard UI. This structure is the pattern the rest of the team will replicate for the Maintenance, Occupancy, Security, and Cost modules in later milestones. Beyond the original brief, the dashboard was later extended into a fully interactive tool — live filtering, click-to-detail views, and direct add/delete editing of the underlying dataset.
 
 ---
 
@@ -101,11 +101,17 @@ Implemented `backend/app/agents/energy_agent.py` as an `EnergyAgent` class. Core
 
 - Built a FastAPI application (`backend/app/main.py`) with CORS middleware enabled for the local frontend dev server (`http://localhost:5173`).
 - Implemented endpoints (`backend/app/api/routes.py`):
-  - `GET /api/energy/analytics?facility_id=1` → returns the full analytics payload as JSON
-  - `GET /api/energy/recommendations?facility_id=1` → returns the list of recommendation strings
-  - `GET /api/energy/temperature-correlation?facility_id=1` → returns correlation coefficient, binned averages, and scatter sample (see Extended Analytics below)
-  - `GET /api/energy/day-of-week?facility_id=1` → returns average consumption per day of week
-  - `GET /api/energy/anomalies?facility_id=1&threshold=2.0` → returns detected statistical anomalies
+  - `GET /api/energy/analytics?facility_id=1` → full analytics payload
+  - `GET /api/energy/recommendations?facility_id=1` → recommendation strings
+  - `GET /api/energy/temperature-correlation?facility_id=1` → correlation coefficient + binned averages
+  - `GET /api/energy/day-of-week?facility_id=1` → average consumption per day of week
+  - `GET /api/energy/anomalies?facility_id=1&threshold=2.0` → detected statistical anomalies, balanced across spikes and drops
+  - `GET /api/energy/monthly-trend?facility_id=1` → monthly consumption + temperature averages (for the dashboard's trend overlay)
+  - `GET /api/energy/anomaly-detail?timestamp=...&facility_id=1` → full context for one flagged anomaly, including a ±2 hour reading window
+  - `POST /api/energy/simulate` → predicts consumption for a hypothetical hour/temperature/occupancy combination using a trained regression model (kept in the API for completeness; not currently exposed in the dashboard UI — see Phase 6 notes)
+  - `POST /api/energy/readings` → adds a new real reading to `energy_usage`
+  - `DELETE /api/energy/readings/{record_id}` → deletes a reading by ID
+  - `GET /api/energy/readings/recent` → lists the most recent readings, for the add/delete UI
 - Verified all endpoints interactively via FastAPI's auto-generated Swagger UI at `/docs`.
 - Ran locally via:
   ```bash
@@ -116,64 +122,69 @@ Implemented `backend/app/agents/energy_agent.py` as an `EnergyAgent` class. Core
 
 ## Phase 6: Energy Monitoring Dashboard
 
-**Objective:** Visualize the Energy Agent's analytics and recommendations in a usable frontend interface.
+**Objective:** Visualize the Energy Agent's analytics and recommendations in a usable, interactive frontend interface.
 
+### Initial build
 - Scaffolded the frontend with Vite + React (JavaScript, ESLint).
 - Installed `axios` (API calls) and `recharts` (charting).
 - Built an API service layer (`frontend/src/services/api.js`) wrapping calls to all backend endpoints.
-- Built the Energy dashboard page (`frontend/src/pages/energy/index.jsx`) displaying:
-  - Summary stat cards (average / peak / lowest consumption)
-  - A radial gauge visualizing average load relative to peak
-  - An hourly consumption trend chart (gradient area chart, all 24 hours labeled)
-  - A day-of-week bar chart and an anomaly list, shown side by side (half-width each)
-  - A temperature-vs-consumption scatter chart (full width)
-  - A list of the agent's generated efficiency recommendations
-- Applied a dedicated visual design system (`frontend/src/index.css`, `frontend/src/App.css`) styled around a control-room/instrumentation aesthetic appropriate to a facility energy-monitoring tool — dark navy background, amber/cyan data accents, monospace numerals for readings.
-- Verified the dashboard renders correctly against the live backend at `http://localhost:5173`, backend running at `http://127.0.0.1:8000`.
+- Applied a dedicated visual design system (`frontend/src/index.css`, `frontend/src/App.css`) styled around a control-room/instrumentation aesthetic — dark navy background, amber/cyan data accents, monospace numerals for readings.
+
+### Layout redesign
+- Restructured the dashboard from stacked full-width cards into a grid-based panel system (`.dash-grid`, `.panel` CSS classes), modeled on a reference multi-panel analytics dashboard layout.
+- Replaced the original full-circle gauge with a custom SVG **semi-circle gauge** component, reused across both stat panels (avg-vs-peak load, weekend load ratio).
+- Row 1: semi-circle gauge + two stat-cluster panels (Consumption Overview, Range) using a horizontal, divided-column layout instead of stacked cards.
+- Replaced the original temperature-vs-consumption **scatter plot** with a **dual-line area overlay chart** — monthly average consumption and outdoor temperature plotted together on independent Y-axes with a shared legend, giving a clearer seasonal trend view than the raw scatter.
+
+### Interactivity — click-to-detail
+- Anomaly table rows are now clickable: clicking a flagged reading opens a modal showing full context — deviation from the mean, z-score, conditions at that reading (temperature, occupancy, day), and a ±2 hour window of surrounding readings for comparison.
+
+### Interactivity — search & filter
+- The Detected Anomalies panel includes a live text search (by timestamp) and a type filter (All / Spikes Only / Drops Only), applied client-side against the already-loaded anomaly list.
+
+### Dynamic data — add & delete
+- Added a dedicated "Add / Remove Real Data" panel allowing a user to insert a new `energy_usage` reading (timestamp, power, temperature, occupancy) directly into the database, and delete any of the most recent readings.
+- Every add/delete triggers a full re-fetch of all analytics, recommendations, charts, and stats (`refreshAllData()`), so the entire dashboard recalculates live from the updated database — not from cached or simulated values.
+- The earlier "Simulate a Reading" panel (a what-if predictor using a trained `RandomForestRegressor`) was built and tested, then removed from the UI in favor of this real add/delete workflow, which better demonstrates genuine dynamic data — the underlying model and `/energy/simulate` endpoint remain in the codebase.
 
 ---
 
 ## Extended Analytics & Recommendations
 
-After completing the core Milestone 1 deliverables, the following additional analytics were added to `EnergyAgent`, extending beyond the minimum brief to strengthen the recommendation engine.
-
 ### Temperature Correlation — `get_temperature_correlation()`
-
 - Computes the Pearson correlation coefficient between `outdoor_temp` and `power_consumption`.
-- Bins temperature into ranges (`<0°C`, `0-10°C`, `10-20°C`, `20-30°C`, `30°C+`) and reports average consumption per range.
-- Returns a random sample of 500 (timestamp, consumption) pairs for scatter-plotting on the dashboard.
-- **Result:** r = 0.477 (moderate positive correlation). Average consumption rises steadily with temperature — 52.24 kWh (0–10°C) → 70.68 kWh (10–20°C) → 90.83 kWh (20–30°C) — consistent with cooling-driven (AC) load rather than heating. No readings existed below 0°C or above 30°C in this dataset's May–Dec 2018 window.
+- Bins temperature into ranges and reports average consumption per range.
+- **Result:** r = 0.477 (moderate positive correlation). Average consumption rises steadily with temperature — 52.24 kWh (0–10°C) → 70.68 kWh (10–20°C) → 90.83 kWh (20–30°C) — consistent with cooling-driven (AC) load rather than heating.
 
 ### Day-of-Week Breakdown — `get_day_of_week_breakdown()`
-
-- Groups average consumption by full day name (Monday–Sunday, explicitly ordered rather than left alphabetical).
 - **Result:** Tuesday shows the highest average consumption (75.98 kWh), Sunday the lowest (62.41 kWh) — a ~22% gap.
 
-### Anomaly / Spike Detection — `get_anomalies(threshold=2.0)`
-
-- Computes a z-score for every reading (`(value - mean) / std`).
-- Flags any reading with `|z-score| > threshold` (default 2.0 standard deviations) as an anomaly, classified as a `spike` (unusually high) or `drop` (unusually low).
-- Returns total anomaly count plus the top 20 most extreme, sorted by magnitude.
+### Anomaly / Spike Detection — `get_anomalies()`
+- Computes a z-score for every reading; flags any reading beyond the threshold as a `spike` or `drop`.
+- Rebalanced to return the top spikes **and** top drops separately (rather than one combined top-20 list dominated by the highest raw values), so both anomaly types are genuinely represented in the UI and its filters.
 - **Result:** 1,196 readings (5.63% of all data) flagged at the default threshold.
 
+### Monthly Trend — `get_monthly_trend()`
+- Aggregates average consumption and average outdoor temperature per calendar month, powering the dual-line dashboard chart.
+
+### Anomaly Detail — `get_anomaly_detail()`
+- Given a specific timestamp, returns its exact deviation from the mean, z-score, conditions at that reading, and the surrounding ±2 hour window of readings for context — powers the click-to-detail modal.
+
+### Live Data Editing — `add_reading()` / `delete_reading()` / `get_recent_readings()`
+- Real CRUD operations against `energy_usage`, invalidating the agent's cached DataFrame on every change so subsequent analytics calls reflect the update immediately.
+
+### Consumption Prediction Model — `train_energy_model.py` / `predict_consumption()`
+- A `RandomForestRegressor` trained on `hour`, `outdoor_temp`, `occupancy`, and `is_weekend` to predict expected consumption.
+- **Result:** MAE ≈ 11.62 kWh, R² ≈ 0.481 — a moderate result, explaining roughly half the variance in consumption from these four features alone; the remainder likely reflects anomalies and equipment-specific variation not captured by time/weather/occupancy inputs.
+
 ### Expanded Recommendation Engine
-
-`get_recommendations()` was extended from 3 rules to 6, now drawing on all analytics endpoints:
-
+`get_recommendations()` produces 6 rules, drawing on all analytics above:
 1. Weekend vs. weekday consumption gap (equipment-left-on check)
 2. Peak usage hour (load-shifting suggestion)
 3. Zero-occupancy periods with above-average consumption (equipment waste check)
-4. Temperature correlation strength/direction (cooling vs. heating load driver, with different advice for each)
-5. Worst vs. best day of week, only flagged if the gap exceeds 15% (avoids flagging noise)
+4. Temperature correlation strength/direction (cooling vs. heating load driver)
+5. Worst vs. best day of week, only flagged if the gap exceeds 15%
 6. Anomaly frequency and count, prompting investigation of specific flagged timestamps
-
-**Sample verified output (facility_id = 1):**
-> "Weekend consumption (65.07 avg) is close to weekday levels (73.85 avg)..."
-> "Consumption peaks around 21:00..."
-> "16.1% of readings show above-average consumption during zero-occupancy periods..."
-> "Consumption correlates strongly with outdoor temperature (r=0.477), suggesting cooling (AC) load is a major driver..."
-> "Tuesday shows the highest average consumption (75.98 kWh) compared to Sunday, the lowest (62.41 kWh)..."
-> "1196 readings (5.63% of data) were flagged as statistical anomalies, including 20 unusual spikes in the top 20..."
 
 ---
 
@@ -183,8 +194,8 @@ After completing the core Milestone 1 deliverables, the following additional ana
 |---|---|
 | Integrate utility and IoT data | ✅ Complete |
 | Build Energy Agent | ✅ Complete |
-| Develop energy consumption analytics | ✅ Complete (core + extended: temperature correlation, day-of-week, anomaly detection) |
-| Create energy monitoring dashboard | ✅ Complete |
+| Develop energy consumption analytics | ✅ Complete (core + extended: temperature correlation, day-of-week, anomaly detection, monthly trend) |
+| Create energy monitoring dashboard | ✅ Complete — redesigned layout, click-to-detail, search/filter, live add/delete editing |
 | Generate energy efficiency recommendations | ✅ Complete (6 rules) |
 
 ---
@@ -217,4 +228,4 @@ Then open `http://localhost:5173`.
 
 ## Next Steps (Later Milestones)
 
-The remaining schema tables (`assets`, `maintenance_records`, `security_events`, `alerts`, `cost_reports`) and their corresponding agents (Maintenance, Occupancy, Security, Cost-Optimization, Alerts) are planned for subsequent milestones, following the same pattern established here: agent class → analytics/logic → API route → dashboard page.
+The remaining schema tables (`security_events`, `alerts`, `cost_reports`) and their corresponding agents (Occupancy, Security, Cost-Optimization, Alerts) are planned for subsequent milestones, following the same pattern established here and extended in Milestone 2: agent class → analytics/logic → API route → interactive dashboard page.
