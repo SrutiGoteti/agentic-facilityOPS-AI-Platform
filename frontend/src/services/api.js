@@ -141,3 +141,91 @@ export const getAssetList = async (facilityId = 1) => {
   });
   return response.data.assets;
 };
+
+export const getOccupancyAnalytics = async (facilityId = 1) => {
+  const response = await axios.get(`${API_BASE}/occupancy/analytics`, { params: { facility_id: facilityId } });
+  return response.data;
+};
+
+export const getOccupancyHeatmap = async (facilityId = 1) => {
+  const response = await axios.get(`${API_BASE}/occupancy/heatmap`, { params: { facility_id: facilityId } });
+  return response.data.rooms;
+};
+
+export const getRoomComparison = async (facilityId = 1) => {
+  const response = await axios.get(`${API_BASE}/occupancy/room-comparison`, { params: { facility_id: facilityId } });
+  return response.data.rooms;
+};
+
+export const getOvercrowdingEvents = async (facilityId = 1) => {
+  const response = await axios.get(`${API_BASE}/occupancy/overcrowding`, { params: { facility_id: facilityId } });
+  return response.data;
+};
+
+export const getOccupancyDayOfWeek = async (facilityId = 1) => {
+  const response = await axios.get(`${API_BASE}/occupancy/day-of-week`, { params: { facility_id: facilityId } });
+  return response.data;
+};
+
+export const getOccupancyRecommendations = async (facilityId = 1) => {
+  const response = await axios.get(`${API_BASE}/occupancy/recommendations`, { params: { facility_id: facilityId } });
+  return response.data.recommendations;
+};
+
+export const addOccupancyRecord = async (data, facilityId = 1) => {
+  const response = await axios.post(`${API_BASE}/occupancy/records`, data, { params: { facility_id: facilityId } });
+  return response.data;
+};
+
+export const deleteOccupancyRecord = async (recordId, facilityId = 1) => {
+  const response = await axios.delete(`${API_BASE}/occupancy/records/${recordId}`, { params: { facility_id: facilityId } });
+  return response.data;
+};
+
+export const getRecentOccupancyRecords = async (facilityId = 1, limit = 20) => {
+  const response = await axios.get(`${API_BASE}/occupancy/records/recent`, { params: { facility_id: facilityId, limit } });
+  return response.data.records;
+};
+
+export const getOccupancyRoomList = async (facilityId = 1) => {
+  const response = await axios.get(`${API_BASE}/occupancy/rooms`, { params: { facility_id: facilityId } });
+  return response.data.rooms;
+};
+
+export const getSecurityAnalytics = async (facilityId = 1) => {
+  const response = await axios.get(`${API_BASE}/security/analytics`, { params: { facility_id: facilityId } });
+  return response.data;
+};
+export const getSecurityEventsByType = async (facilityId = 1) => {
+  const response = await axios.get(`${API_BASE}/security/events-by-type`, { params: { facility_id: facilityId } });
+  return response.data.types;
+};
+export const getSecurityTimeline = async (facilityId = 1) => {
+  const response = await axios.get(`${API_BASE}/security/timeline`, { params: { facility_id: facilityId } });
+  return response.data.by_hour;
+};
+export const getAfterHoursEvents = async (facilityId = 1) => {
+  const response = await axios.get(`${API_BASE}/security/after-hours`, { params: { facility_id: facilityId } });
+  return response.data;
+};
+export const getSecurityRecommendations = async (facilityId = 1) => {
+  const response = await axios.get(`${API_BASE}/security/recommendations`, { params: { facility_id: facilityId } });
+  return response.data.recommendations;
+};
+export const addSecurityEvent = async (data, facilityId = 1) => {
+  const response = await axios.post(`${API_BASE}/security/events`, data, { params: { facility_id: facilityId } });
+  return response.data;
+};
+export const deleteSecurityEvent = async (eventId, facilityId = 1) => {
+  const response = await axios.delete(`${API_BASE}/security/events/${eventId}`, { params: { facility_id: facilityId } });
+  return response.data;
+};
+export const getRecentSecurityEvents = async (facilityId = 1, limit = 20) => {
+  const response = await axios.get(`${API_BASE}/security/events/recent`, { params: { facility_id: facilityId, limit } });
+  return response.data.events;
+};
+
+export const getEventsByLocation = async (facilityId = 1) => {
+  const response = await axios.get(`${API_BASE}/security/events-by-location`, { params: { facility_id: facilityId } });
+  return response.data.locations;
+};

@@ -48,3 +48,32 @@ class MaintenanceRecord(Base):
     tool_wear = Column(Float)
     machine_failure = Column(Boolean)
     failure_type = Column(String) 
+
+class Room(Base):
+    __tablename__ = "rooms"
+
+    room_id = Column(Integer, primary_key=True, autoincrement=True)
+    facility_id = Column(Integer, ForeignKey("facilities.facility_id"), nullable=False)
+    room_name = Column(String)
+    room_type = Column(String)
+    capacity = Column(Integer)
+
+
+class RoomOccupancy(Base):
+    __tablename__ = "room_occupancy"
+
+    record_id = Column(Integer, primary_key=True, autoincrement=True)
+    room_id = Column(Integer, ForeignKey("rooms.room_id"), nullable=False)
+    timestamp = Column(DateTime, nullable=False)
+    headcount = Column(Integer)
+
+class SecurityEvent(Base):
+    __tablename__ = "security_events"
+
+    event_id = Column(Integer, primary_key=True, autoincrement=True)
+    facility_id = Column(Integer, ForeignKey("facilities.facility_id"), nullable=False)
+    timestamp = Column(DateTime, nullable=False)
+    location = Column(String)
+    event_type = Column(String)
+    severity = Column(String)
+    resolved = Column(Boolean, default=False)

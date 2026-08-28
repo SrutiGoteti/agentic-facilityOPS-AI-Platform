@@ -156,3 +156,151 @@ def get_recent_maintenance_records(facility_id: int = 1, limit: int = 20):
 def get_asset_list(facility_id: int = 1):
     agent = MaintenanceAgent(facility_id=facility_id)
     return {"assets": agent.get_asset_list()}
+
+from app.agents.occupancy_agent import OccupancyAgent
+
+@router.get("/occupancy/analytics")
+def get_occupancy_analytics(facility_id: int = 1):
+    agent = OccupancyAgent(facility_id=facility_id)
+    return agent.get_analytics()
+
+@router.get("/occupancy/heatmap")
+def get_occupancy_heatmap(facility_id: int = 1):
+    agent = OccupancyAgent(facility_id=facility_id)
+    return {"rooms": agent.get_room_heatmap()}
+
+@router.get("/occupancy/room-comparison")
+def get_room_comparison(facility_id: int = 1):
+    agent = OccupancyAgent(facility_id=facility_id)
+    return {"rooms": agent.get_room_comparison()}
+
+@router.get("/occupancy/overcrowding")
+def get_overcrowding_events(facility_id: int = 1):
+    agent = OccupancyAgent(facility_id=facility_id)
+    return agent.get_overcrowding_events()
+
+@router.get("/occupancy/day-of-week")
+def get_occupancy_day_of_week(facility_id: int = 1):
+    agent = OccupancyAgent(facility_id=facility_id)
+    return agent.get_day_of_week_pattern()
+
+@router.get("/occupancy/recommendations")
+def get_occupancy_recommendations(facility_id: int = 1):
+    agent = OccupancyAgent(facility_id=facility_id)
+    return {"recommendations": agent.get_recommendations()}
+
+from app.agents.occupancy_agent import OccupancyAgent
+
+@router.get("/occupancy/analytics")
+def get_occupancy_analytics(facility_id: int = 1):
+    agent = OccupancyAgent(facility_id=facility_id)
+    return agent.get_analytics()
+
+@router.get("/occupancy/heatmap")
+def get_occupancy_heatmap(facility_id: int = 1):
+    agent = OccupancyAgent(facility_id=facility_id)
+    return {"rooms": agent.get_room_heatmap()}
+
+@router.get("/occupancy/room-comparison")
+def get_room_comparison(facility_id: int = 1):
+    agent = OccupancyAgent(facility_id=facility_id)
+    return {"rooms": agent.get_room_comparison()}
+
+@router.get("/occupancy/overcrowding")
+def get_overcrowding_events(facility_id: int = 1):
+    agent = OccupancyAgent(facility_id=facility_id)
+    return agent.get_overcrowding_events()
+
+@router.get("/occupancy/day-of-week")
+def get_occupancy_day_of_week(facility_id: int = 1):
+    agent = OccupancyAgent(facility_id=facility_id)
+    return agent.get_day_of_week_pattern()
+
+@router.get("/occupancy/recommendations")
+def get_occupancy_recommendations(facility_id: int = 1):
+    agent = OccupancyAgent(facility_id=facility_id)
+    return {"recommendations": agent.get_recommendations()}
+
+class OccupancyRecordInput(BaseModel):
+    room_id: int
+    timestamp: str
+    headcount: int
+
+@router.post("/occupancy/records")
+def add_occupancy_record(input: OccupancyRecordInput, facility_id: int = 1):
+    agent = OccupancyAgent(facility_id=facility_id)
+    return agent.add_record(input.room_id, datetime.fromisoformat(input.timestamp), input.headcount)
+
+@router.delete("/occupancy/records/{record_id}")
+def delete_occupancy_record(record_id: int, facility_id: int = 1):
+    agent = OccupancyAgent(facility_id=facility_id)
+    return agent.delete_record(record_id)
+
+@router.get("/occupancy/records/recent")
+def get_recent_occupancy_records(facility_id: int = 1, limit: int = 20):
+    agent = OccupancyAgent(facility_id=facility_id)
+    return {"records": agent.get_recent_records(limit)}
+
+@router.get("/occupancy/rooms")
+def get_room_list(facility_id: int = 1):
+    agent = OccupancyAgent(facility_id=facility_id)
+    return {"rooms": agent.get_room_list()}
+
+from app.agents.security_agent import SecurityAgent
+
+@router.get("/security/analytics")
+def get_security_analytics(facility_id: int = 1):
+    agent = SecurityAgent(facility_id=facility_id)
+    return agent.get_analytics()
+
+@router.get("/security/events-by-type")
+def get_events_by_type(facility_id: int = 1):
+    agent = SecurityAgent(facility_id=facility_id)
+    return {"types": agent.get_events_by_type()}
+
+@router.get("/security/timeline")
+def get_security_timeline(facility_id: int = 1):
+    agent = SecurityAgent(facility_id=facility_id)
+    return agent.get_timeline()
+
+@router.get("/security/after-hours")
+def get_after_hours_events(facility_id: int = 1):
+    agent = SecurityAgent(facility_id=facility_id)
+    return agent.get_after_hours_events()
+
+@router.get("/security/recommendations")
+def get_security_recommendations(facility_id: int = 1):
+    agent = SecurityAgent(facility_id=facility_id)
+    return {"recommendations": agent.get_recommendations()}
+
+class SecurityEventInput(BaseModel):
+    timestamp: str
+    location: str
+    event_type: str
+    severity: str
+    resolved: bool = False
+
+@router.post("/security/events")
+def add_security_event(input: SecurityEventInput, facility_id: int = 1):
+    agent = SecurityAgent(facility_id=facility_id)
+    return agent.add_event(datetime.fromisoformat(input.timestamp), input.location, input.event_type, input.severity, input.resolved)
+
+@router.delete("/security/events/{event_id}")
+def delete_security_event(event_id: int, facility_id: int = 1):
+    agent = SecurityAgent(facility_id=facility_id)
+    return agent.delete_event(event_id)
+
+@router.get("/security/events/recent")
+def get_recent_security_events(facility_id: int = 1, limit: int = 20):
+    agent = SecurityAgent(facility_id=facility_id)
+    return {"events": agent.get_recent_events(limit)}
+
+@router.get("/security/events-by-location")
+def get_events_by_location(facility_id: int = 1):
+    agent = SecurityAgent(facility_id=facility_id)
+    return {"locations": agent.get_events_by_location()}
+
+@router.get("/security/resolution-rate")
+def get_resolution_rate(facility_id: int = 1):
+    agent = SecurityAgent(facility_id=facility_id)
+    return {"rates": agent.get_resolution_by_severity()}
