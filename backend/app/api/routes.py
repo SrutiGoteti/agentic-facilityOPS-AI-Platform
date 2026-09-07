@@ -1,6 +1,8 @@
 from fastapi import APIRouter
+from fastapi import HTTPException
 from app.agents.energy_agent import EnergyAgent
 from app.agents.maintenance_agent import MaintenanceAgent
+from app.core.database import SessionLocal
 
 router = APIRouter()
 
@@ -304,3 +306,113 @@ def get_events_by_location(facility_id: int = 1):
 def get_resolution_rate(facility_id: int = 1):
     agent = SecurityAgent(facility_id=facility_id)
     return {"rates": agent.get_resolution_by_severity()}
+
+from app.agents.cost_agent import CostOptimizationAgent
+
+@router.get("/cost/analytics")
+def get_cost_analytics(facility_id: int = 1):
+    agent = CostOptimizationAgent(facility_id=facility_id)
+    return agent.get_analytics()
+
+@router.get("/cost/distribution")
+def get_cost_distribution(facility_id: int = 1):
+    agent = CostOptimizationAgent(facility_id=facility_id)
+    return {"categories": agent.get_cost_distribution()}
+
+@router.get("/cost/trend")
+def get_cost_trend(facility_id: int = 1):
+    agent = CostOptimizationAgent(facility_id=facility_id)
+    return {"trend": agent.get_cost_trend()}
+
+@router.get("/cost/category-trend/{category}")
+def get_category_trend(category: str, facility_id: int = 1):
+    agent = CostOptimizationAgent(facility_id=facility_id)
+    return {"trend": agent.get_category_trend(category)}
+
+@router.get("/cost/health-score")
+def get_facility_health_score(facility_id: int = 1):
+    agent = CostOptimizationAgent(facility_id=facility_id)
+    return agent.get_facility_health_score()
+
+@router.get("/cost/recommendations")
+def get_cost_recommendations(facility_id: int = 1):
+    agent = CostOptimizationAgent(facility_id=facility_id)
+    return {"recommendations": agent.get_recommendations()}
+
+class CostEntryInput(BaseModel):
+    category: str
+    amount: float
+    period: str
+    description: str = ""
+
+@router.post("/cost/entries")
+def add_cost_entry(input: CostEntryInput, facility_id: int = 1):
+    agent = CostOptimizationAgent(facility_id=facility_id)
+    return agent.add_entry(input.category, input.amount, input.period, input.description)
+
+@router.delete("/cost/entries/{entry_id}")
+def delete_cost_entry(entry_id: int, facility_id: int = 1):
+    agent = CostOptimizationAgent(facility_id=facility_id)
+    return agent.delete_entry(entry_id)
+
+@router.get("/cost/entries/recent")
+def get_recent_cost_entries(facility_id: int = 1, limit: int = 20):
+    agent = CostOptimizationAgent(facility_id=facility_id)
+    return {"entries": agent.get_recent_entries(limit)}
+
+@router.get("/cost/category-detail/{category}")
+def get_category_detail(category: str, facility_id: int = 1):
+    agent = CostOptimizationAgent(facility_id=facility_id)
+    return agent.get_category_detail(category)
+
+from app.core.auth_utils import hash_password, verify_password, create_access_token, get_current_user
+from app.models.db_models import User
+from fastapi import Depends
+
+class RegisterInput(BaseModel):
+    username: str
+    email: str
+    password: str
+
+class LoginInput(BaseModel):
+    username: str
+    password: str
+
+@router.post("/auth/register")
+def register(input: RegisterInput):
+    session = SessionLocal()
+    existing = session.query(User).filter(
+        (User.username == input.username) | (User.email == input.email)
+    ).first()
+    if existing:
+        session.close()
+        raise HTTPException(status_code=400, detail="Username or email already exists")
+
+    new_user = User(
+        username=input.username,
+        email=input.email,
+        hashed_password=hash_password(input.password)
+    )
+    session.add(new_user)
+    session.commit()
+    user_id = new_user.user_id
+    session.close()
+
+    token = create_access_token(user_id, input.username)
+    return {"token": token, "username": input.username}
+
+@router.post("/auth/login")
+def login(input: LoginInput):
+    session = SessionLocal()
+    user = session.query(User).filter(User.username == input.username).first()
+    session.close()
+
+    if not user or not verify_password(input.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+
+    token = create_access_token(user.user_id, user.username)
+    return {"token": token, "username": user.username}
+
+@router.get("/auth/me")
+def get_me(current_user: dict = Depends(get_current_user)):
+    return current_user

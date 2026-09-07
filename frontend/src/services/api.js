@@ -229,3 +229,45 @@ export const getEventsByLocation = async (facilityId = 1) => {
   const response = await axios.get(`${API_BASE}/security/events-by-location`, { params: { facility_id: facilityId } });
   return response.data.locations;
 };
+
+export const getCostAnalytics = async (facilityId = 1) => {
+  const response = await axios.get(`${API_BASE}/cost/analytics`, { params: { facility_id: facilityId } });
+  return response.data;
+};
+export const getCostDistribution = async (facilityId = 1) => {
+  const response = await axios.get(`${API_BASE}/cost/distribution`, { params: { facility_id: facilityId } });
+  return response.data.categories;
+};
+export const getCostTrend = async (facilityId = 1) => {
+  const response = await axios.get(`${API_BASE}/cost/trend`, { params: { facility_id: facilityId } });
+  return response.data.trend;
+};
+export const getCategoryTrend = async (category, facilityId = 1) => {
+  const response = await axios.get(`${API_BASE}/cost/category-trend/${category}`, { params: { facility_id: facilityId } });
+  return response.data.trend;
+};
+export const getFacilityHealthScore = async (facilityId = 1) => {
+  const response = await axios.get(`${API_BASE}/cost/health-score`, { params: { facility_id: facilityId } });
+  return response.data;
+};
+export const getCostRecommendations = async (facilityId = 1) => {
+  const response = await axios.get(`${API_BASE}/cost/recommendations`, { params: { facility_id: facilityId } });
+  return response.data.recommendations;
+};
+export const addCostEntry = async (data, facilityId = 1) => {
+  const response = await axios.post(`${API_BASE}/cost/entries`, data, { params: { facility_id: facilityId } });
+  return response.data;
+};
+export const deleteCostEntry = async (entryId, facilityId = 1) => {
+  const response = await axios.delete(`${API_BASE}/cost/entries/${entryId}`, { params: { facility_id: facilityId } });
+  return response.data;
+};
+export const getRecentCostEntries = async (facilityId = 1, limit = 20) => {
+  const response = await axios.get(`${API_BASE}/cost/entries/recent`, { params: { facility_id: facilityId, limit } });
+  return response.data.entries;
+};
+
+export const getCategoryDetail = async (category, facilityId = 1) => {
+  const response = await axios.get(`${API_BASE}/cost/category-detail/${category}`, { params: { facility_id: facilityId } });
+  return response.data;
+};

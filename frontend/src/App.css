@@ -54,8 +54,10 @@
 
 .stat-value {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 32px;
+  font-size: 26px;
   font-weight: 700;
+  word-break: break-word;
+  line-height: 1.2;
 }
 
 .stat-value.amber { color: var(--amber); }
@@ -391,4 +393,10 @@
 
 @media (max-width: 900px) {
   .status-group-grid { grid-template-columns: 1fr; }
+}
+
+.dash-grid.cols-4-even { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+@media (max-width: 900px) {
+  .dash-grid.cols-4-even { grid-template-columns: 1fr 1fr; }
 }

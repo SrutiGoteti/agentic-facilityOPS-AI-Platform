@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, Date, Boolean, ForeignKey
+from datetime import datetime
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -77,3 +78,22 @@ class SecurityEvent(Base):
     event_type = Column(String)
     severity = Column(String)
     resolved = Column(Boolean, default=False)
+
+class CostEntry(Base):
+    __tablename__ = "cost_entries"
+
+    entry_id = Column(Integer, primary_key=True, autoincrement=True)
+    facility_id = Column(Integer, ForeignKey("facilities.facility_id"), nullable=False)
+    category = Column(String)  # energy, maintenance, security, administrative
+    amount = Column(Float)
+    period = Column(String)    # e.g. "2018-05" (year-month)
+    description = Column(String)
+
+class User(Base):
+    __tablename__ = "users"
+
+    user_id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String, unique=True, nullable=False)
+    email = Column(String, unique=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
