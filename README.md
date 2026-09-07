@@ -20,8 +20,8 @@ The Agentic FacilityOps AI Platform utilizes a micro-agent architecture to handl
   - Integrating utility and IoT data.
   - Developing the Energy Agent and consumption analytics.
   - Generating energy efficiency recommendations.
-- [ ] **Milestone 2: Occupancy Agent**
-- [ ] **Milestone 3: Authorization Agent**
+- [ ] **Milestone 2: Maintenance Agent**
+- [ ] **Milestone 3: Occupancy and Security Agent**
 - [ ] **Milestone 4: Cost-Optimization Agent**
 - [ ] **Milestone 5: Facility Agent**
 - [ ] **Milestone 6 & 7: Dashboard, Alerts & Automation**
