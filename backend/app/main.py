@@ -6,9 +6,16 @@ app = FastAPI(title="Agentic FacilityOps AI Platform")
 
 app.include_router(router, prefix="/api")
 
+import os
+
+allowed_origins = [
+    "http://localhost:5173",
+    os.environ.get("FRONTEND_URL", ""),
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )

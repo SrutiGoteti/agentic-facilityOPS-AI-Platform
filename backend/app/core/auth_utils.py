@@ -1,8 +1,9 @@
 import bcrypt
 import jwt
 from datetime import datetime, timedelta
+import os
 
-SECRET_KEY = "change-this-to-a-random-secret-in-production"
+SECRET_KEY = os.environ.get("SECRET_KEY", "change-this-to-a-random-secret-in-production")
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_HOURS = 24
 
