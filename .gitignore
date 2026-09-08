@@ -29,6 +29,8 @@ data/raw/*
 data/processed/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
+!data/raw/cleandata.xlsx
+!data/raw/ai4i2020.csv
 
 # ---------- OS / Editor junk ----------
 .DS_Store
