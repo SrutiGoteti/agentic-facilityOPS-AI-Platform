@@ -33,8 +33,14 @@ def load_room_occupancy(session, rooms):
 
     energy_records = session.query(EnergyUsage.timestamp).filter(EnergyUsage.facility_id == 1).all()
     df = pd.DataFrame(energy_records, columns=["timestamp"])
-    df["hour"] = pd.to_datetime(df["timestamp"]).dt.hour
-    df["is_weekend"] = pd.to_datetime(df["timestamp"]).dt.dayofweek >= 5
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
+
+    # Reduce to hourly granularity — occupancy sensors commonly report hourly in
+    # practice, and this keeps the table size manageable on constrained hosting
+    df = df[df["timestamp"].dt.minute == 0].reset_index(drop=True)
+
+    df["hour"] = df["timestamp"].dt.hour
+    df["is_weekend"] = df["timestamp"].dt.dayofweek >= 5
 
     # Real timing pattern: active during business hours on weekdays, quiet otherwise —
     # this keeps the WHEN grounded in realistic building-usage patterns, only the
