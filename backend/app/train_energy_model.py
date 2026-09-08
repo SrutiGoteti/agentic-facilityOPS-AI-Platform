@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import joblib
 from sklearn.model_selection import train_test_split
@@ -36,6 +37,7 @@ def train():
     print("MAE:", round(mae, 2))
     print("R²:", round(r2, 3))
 
+    os.makedirs("../ml_models/energy", exist_ok=True)
     joblib.dump(model, "../ml_models/energy/consumption_model.pkl")
     print("Model saved to ml_models/energy/consumption_model.pkl")
 

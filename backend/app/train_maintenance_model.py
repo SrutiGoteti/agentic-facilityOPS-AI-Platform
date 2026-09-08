@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import joblib
 from sklearn.model_selection import train_test_split
@@ -41,6 +42,7 @@ def train():
     print("\n=== Feature Importance ===")
     print(importance)
 
+    os.makedirs("../ml_models/maintenance", exist_ok=True)
     joblib.dump(model, "../ml_models/maintenance/failure_model.pkl")
     joblib.dump(le, "../ml_models/maintenance/type_encoder.pkl")
     print("\nModel saved to ml_models/maintenance/failure_model.pkl")
