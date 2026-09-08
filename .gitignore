@@ -23,6 +23,9 @@ frontend/build/
 ml_models/**/*.pkl
 ml_models/**/*.h5
 ml_models/**/*.joblib
+!ml_models/maintenance/failure_model.pkl
+!ml_models/maintenance/type_encoder.pkl
+!ml_models/energy/consumption_model.pkl
 
 # ---------- Data (raw/processed can be large or sensitive) ----------
 data/raw/*

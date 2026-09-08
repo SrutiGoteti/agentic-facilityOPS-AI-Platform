@@ -28,7 +28,7 @@ def train():
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    model = RandomForestRegressor(n_estimators=200, random_state=42)
+    model = RandomForestRegressor(n_estimators=100, max_depth=15, min_samples_leaf=5, random_state=42)
     model.fit(X_train, y_train)
 
     y_pred = model.predict(X_test)
@@ -38,7 +38,7 @@ def train():
     print("R²:", round(r2, 3))
 
     os.makedirs("../ml_models/energy", exist_ok=True)
-    joblib.dump(model, "../ml_models/energy/consumption_model.pkl")
+    joblib.dump(model, "../ml_models/energy/consumption_model.pkl", compress=3)
     print("Model saved to ml_models/energy/consumption_model.pkl")
 
 if __name__ == "__main__":
