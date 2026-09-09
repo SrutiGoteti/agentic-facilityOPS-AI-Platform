@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { getOccupancyDashboard, addOccupancyRecord, deleteOccupancyRecord } from "../../services/api";
+import { getOccupancyAnalytics, getOccupancyHeatmap, getRoomComparison, getOvercrowdingEvents, getOccupancyDayOfWeek, getOccupancyRecommendations, addOccupancyRecord, deleteOccupancyRecord, getRecentOccupancyRecords, getOccupancyRoomList } from "../../services/api";
 import "../../App.css";
 
 function getHeatColor(peakPct) {
@@ -38,17 +38,16 @@ export default function OccupancyDashboard() {
   const [addStatus, setAddStatus] = useState("");
   const [newRecord, setNewRecord] = useState({ room_id: "", timestamp: "", headcount: "" });
 
-const refreshAllData = async () => {
-  const data = await getOccupancyDashboard();
-  setAnalytics(data.analytics);
-  setHeatmap(data.heatmap);
-  setRoomComparison(data.room_comparison);
-  setOvercrowding(data.overcrowding);
-  setDayData(data.day_of_week);
-  setRecommendations(data.recommendations);
-  setRecentRecords(data.recent_records);
-  setRoomOptions(data.rooms);
-};
+  const refreshAllData = () => {
+    getOccupancyAnalytics().then(setAnalytics);
+    getOccupancyHeatmap().then(setHeatmap);
+    getRoomComparison().then(setRoomComparison);
+    getOvercrowdingEvents().then(setOvercrowding);
+    getOccupancyDayOfWeek().then(setDayData);
+    getOccupancyRecommendations().then(setRecommendations);
+    getRecentOccupancyRecords().then(setRecentRecords);
+    getOccupancyRoomList().then(setRoomOptions);
+  };
 
   useEffect(() => {
     refreshAllData();

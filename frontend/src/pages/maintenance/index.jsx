@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { getMaintenanceDashboard, getAssetDetail, addMaintenanceRecord, deleteMaintenanceRecord } from "../../services/api";
+import { getMaintenanceHealthScores, getMaintenanceAlerts, getMaintenanceRecommendations, getAssetDetail, addMaintenanceRecord, deleteMaintenanceRecord, getRecentMaintenanceRecords, getAssetList } from "../../services/api";
 import "../../App.css";
 
 function healthColor(score) {
@@ -48,14 +48,13 @@ export default function MaintenanceDashboard() {
     machine_failure: false, failure_type: ""
   });
 
-const refreshAllData = async () => {
-  const data = await getMaintenanceDashboard();
-  setHealthScores(data.health_scores);
-  setAlerts(data.alerts);
-  setRecommendations(data.recommendations);
-  setRecentRecords(data.recent_records);
-  setAssetOptions(data.assets);
-};
+  const refreshAllData = () => {
+    getMaintenanceHealthScores().then(setHealthScores);
+    getMaintenanceAlerts().then(setAlerts);
+    getMaintenanceRecommendations().then(setRecommendations);
+    getRecentMaintenanceRecords().then(setRecentRecords);
+    getAssetList().then(setAssetOptions);
+  };
 
   useEffect(() => {
     refreshAllData();

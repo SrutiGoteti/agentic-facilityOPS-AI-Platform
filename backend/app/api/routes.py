@@ -132,20 +132,6 @@ def get_recent_energy_readings(facility_id: int = 1, limit: int = 20):
     agent = get_energy_agent(facility_id)
     return {"readings": agent.get_recent_readings(limit)}
 
-@router.get("/energy/dashboard")
-def get_energy_dashboard(facility_id: int = 1):
-    agent = get_energy_agent(facility_id)
-    agent.load_data()
-    return {
-        "analytics": agent.get_analytics(),
-        "recommendations": agent.get_recommendations(),
-        "temperature_correlation": agent.get_temperature_correlation(),
-        "day_of_week": agent.get_day_of_week_breakdown(),
-        "anomalies": agent.get_anomalies(),
-        "monthly_trend": agent.get_monthly_trend(),
-        "recent_readings": agent.get_recent_readings(20),
-    }
-
 
 # ---------- Maintenance ----------
 
@@ -221,17 +207,6 @@ def get_asset_list(facility_id: int = 1):
     agent = get_maintenance_agent(facility_id)
     return {"assets": agent.get_asset_list()}
 
-@router.get("/maintenance/dashboard")
-def get_maintenance_dashboard(facility_id: int = 1):
-    agent = get_maintenance_agent(facility_id)
-    return {
-        "health_scores": agent.get_asset_health_scores(),
-        "alerts": agent.get_maintenance_alerts(),
-        "recommendations": agent.get_recommendations(),
-        "recent_records": agent.get_recent_records(20),
-        "assets": agent.get_asset_list(),
-    }
-
 
 # ---------- Occupancy ----------
 
@@ -289,20 +264,6 @@ def get_recent_occupancy_records(facility_id: int = 1, limit: int = 20):
 def get_room_list(facility_id: int = 1):
     agent = get_occupancy_agent(facility_id)
     return {"rooms": agent.get_room_list()}
-
-@router.get("/occupancy/dashboard")
-def get_occupancy_dashboard(facility_id: int = 1):
-    agent = get_occupancy_agent(facility_id)
-    return {
-        "analytics": agent.get_analytics(),
-        "heatmap": agent.get_room_heatmap(),
-        "room_comparison": agent.get_room_comparison(),
-        "overcrowding": agent.get_overcrowding_events(),
-        "day_of_week": agent.get_day_of_week_pattern(),
-        "recommendations": agent.get_recommendations(),
-        "recent_records": agent.get_recent_records(20),
-        "rooms": agent.get_room_list(),
-    }
 
 
 # ---------- Security ----------
@@ -364,19 +325,6 @@ def get_resolution_rate(facility_id: int = 1):
     agent = get_security_agent(facility_id)
     return {"rates": agent.get_resolution_by_severity()}
 
-@router.get("/security/dashboard")
-def get_security_dashboard(facility_id: int = 1):
-    agent = get_security_agent(facility_id)
-    return {
-        "analytics": agent.get_analytics(),
-        "events_by_type": agent.get_events_by_type(),
-        "events_by_location": agent.get_events_by_location(),
-        "timeline": agent.get_timeline(),
-        "after_hours": agent.get_after_hours_events(),
-        "recommendations": agent.get_recommendations(),
-        "recent_events": agent.get_recent_events(20),
-    }
-
 
 # ---------- Cost Optimization ----------
 
@@ -436,18 +384,6 @@ def get_category_detail(category: str, facility_id: int = 1):
     agent = get_cost_agent(facility_id)
     return agent.get_category_detail(category)
 
-@router.get("/cost/dashboard")
-def get_cost_dashboard(facility_id: int = 1):
-    agent = get_cost_agent(facility_id)
-    return {
-        "analytics": agent.get_analytics(),
-        "distribution": agent.get_cost_distribution(),
-        "trend": agent.get_cost_trend(),
-        "health_score": agent.get_facility_health_score(),
-        "recommendations": agent.get_recommendations(),
-        "recent_entries": agent.get_recent_entries(20),
-    }
-
 
 # ---------- Authentication ----------
 
@@ -498,4 +434,3 @@ def login(input: LoginInput):
 @router.get("/auth/me")
 def get_me(current_user: dict = Depends(get_current_user)):
     return current_user
-

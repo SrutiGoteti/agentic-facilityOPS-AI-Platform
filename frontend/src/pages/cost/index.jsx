@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { PieChart, Pie, Cell, AreaChart, Area, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { getCostDashboard, getCategoryDetail, addCostEntry, deleteCostEntry } from "../../services/api";
+import { getCostAnalytics, getCostDistribution, getCostTrend, getCategoryDetail, getFacilityHealthScore, getCostRecommendations, addCostEntry, deleteCostEntry, getRecentCostEntries } from "../../services/api";
 import "../../App.css";
 
 const CATEGORY_COLORS = {
@@ -37,15 +37,15 @@ export default function CostDashboard() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [categoryDetail, setCategoryDetail] = useState(null);
 
-const refreshAllData = async () => {
-  const data = await getCostDashboard();
-  setAnalytics(data.analytics);
-  setDistribution(data.distribution);
-  setTrend(data.trend);
-  setHealth(data.health_score);
-  setRecommendations(data.recommendations);
-  setRecentEntries(data.recent_entries);
-};
+  const refreshAllData = () => {
+    getCostAnalytics().then(setAnalytics);
+    getCostDistribution().then(setDistribution);
+    getCostTrend().then(setTrend);
+    getFacilityHealthScore().then(setHealth);
+    getCostRecommendations().then(setRecommendations);
+    getRecentCostEntries().then(setRecentEntries);
+  };
+
   useEffect(() => { refreshAllData(); }, []);
 
   const handleAddEntry = async () => {

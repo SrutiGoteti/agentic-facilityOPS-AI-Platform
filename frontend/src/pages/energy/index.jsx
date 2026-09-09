@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ScatterChart, Scatter, BarChart, Bar, Legend } from "recharts";
-import { getEnergyDashboard, getAnomalyDetail, addEnergyReading, deleteEnergyReading } from "../../services/api";
+import { getEnergyAnalytics, getEnergyRecommendations, getTemperatureCorrelation, getDayOfWeekBreakdown, getAnomalies, getMonthlyTrend, getAnomalyDetail, getRecentEnergyReadings, addEnergyReading, deleteEnergyReading } from "../../services/api";
 import "../../App.css";
 
 function SemiGauge({ percent, value, subLabel, color }) {
@@ -38,16 +38,15 @@ export default function EnergyDashboard() {
   const [recentReadings, setRecentReadings] = useState([]);
   const [addStatus, setAddStatus] = useState("");
 
-const refreshAllData = async () => {
-  const data = await getEnergyDashboard();
-  setAnalytics(data.analytics);
-  setRecommendations(data.recommendations);
-  setTempData(data.temperature_correlation);
-  setDayData(data.day_of_week);
-  setAnomalyData(data.anomalies);
-  setMonthlyTrend(data.monthly_trend);
-  setRecentReadings(data.recent_readings);
-};
+  const refreshAllData = () => {
+    getEnergyAnalytics().then(setAnalytics);
+    getEnergyRecommendations().then(setRecommendations);
+    getTemperatureCorrelation().then(setTempData);
+    getDayOfWeekBreakdown().then(setDayData);
+    getAnomalies().then(setAnomalyData);
+    getMonthlyTrend().then(setMonthlyTrend);
+    getRecentEnergyReadings().then(setRecentReadings);
+  };
 
   useEffect(() => {
     refreshAllData();
