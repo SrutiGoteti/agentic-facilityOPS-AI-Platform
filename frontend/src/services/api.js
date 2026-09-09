@@ -271,3 +271,28 @@ export const getCategoryDetail = async (category, facilityId = 1) => {
   const response = await axios.get(`${API_BASE}/cost/category-detail/${category}`, { params: { facility_id: facilityId } });
   return response.data;
 };
+
+export const getEnergyDashboard = async (facilityId = 1) => {
+  const response = await axios.get(`${API_BASE}/energy/dashboard`, { params: { facility_id: facilityId } });
+  return response.data;
+};
+
+export const getMaintenanceDashboard = async (facilityId = 1) => {
+  const response = await axios.get(`${API_BASE}/maintenance/dashboard`, { params: { facility_id: facilityId } });
+  return response.data;
+};
+
+export const getOccupancyDashboard = async (facilityId = 1) => {
+  const response = await axios.get(`${API_BASE}/occupancy/dashboard`, { params: { facility_id: facilityId } });
+  return response.data;
+};
+
+export const getSecurityDashboard = async (facilityId = 1) => {
+  const response = await axios.get(`${API_BASE}/security/dashboard`, { params: { facility_id: facilityId } });
+  return response.data;
+};
+
+export const getCostDashboard = async (facilityId = 1) => {
+  const response = await axios.get(`${API_BASE}/cost/dashboard`, { params: { facility_id: facilityId } });
+  return response.data;
+};

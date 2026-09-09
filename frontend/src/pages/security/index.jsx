@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { getSecurityAnalytics, getSecurityEventsByType, getSecurityTimeline, getAfterHoursEvents, getSecurityRecommendations, addSecurityEvent, deleteSecurityEvent, getRecentSecurityEvents, getEventsByLocation } from "../../services/api";
+import { getSecurityDashboard, addSecurityEvent, deleteSecurityEvent } from "../../services/api";
 import "../../App.css";
 
 const LOCATIONS = ["Main Entrance", "Server Room", "Rear Exit", "Parking Lot", "Loading Dock"];
@@ -25,15 +25,16 @@ export default function SecurityDashboard() {
   const [newEvent, setNewEvent] = useState({ timestamp: "", location: LOCATIONS[0], event_type: EVENT_TYPES[0], severity: "medium", resolved: false });
   const [eventsByLocation, setEventsByLocation] = useState(null);
 
-  const refreshAllData = () => {
-    getSecurityAnalytics().then(setAnalytics);
-    getSecurityEventsByType().then(setByType);
-    getSecurityTimeline().then(setTimeline);
-    getAfterHoursEvents().then(setAfterHours);
-    getSecurityRecommendations().then(setRecommendations);
-    getRecentSecurityEvents().then(setRecentEvents);
-    getEventsByLocation().then(setEventsByLocation);
-  };
+const refreshAllData = async () => {
+  const data = await getSecurityDashboard();
+  setAnalytics(data.analytics);
+  setByType(data.events_by_type);
+  setTimeline(data.timeline);
+  setAfterHours(data.after_hours);
+  setRecommendations(data.recommendations);
+  setRecentEvents(data.recent_events);
+  setEventsByLocation(data.events_by_location);
+};
 
   useEffect(() => { refreshAllData(); }, []);
 
