@@ -1,5 +1,12 @@
-from app.core.database import init_db
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from app.models.db_models import Base
+import os
 
-if __name__ == "__main__":
-    init_db()
-    print("Database and tables created successfully.")
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./persistent_data/facilityops.db")
+
+engine = create_engine(DATABASE_URL, echo=True)
+SessionLocal = sessionmaker(bind=engine)
+
+def init_db():
+    Base.metadata.create_all(bind=engine)
