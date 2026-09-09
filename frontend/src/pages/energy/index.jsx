@@ -1,25 +1,20 @@
 import { useEffect, useState } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ScatterChart, Scatter, BarChart, Bar, Legend } from "recharts";
 import { getEnergyAnalytics, getEnergyRecommendations, getTemperatureCorrelation, getDayOfWeekBreakdown, getAnomalies, getMonthlyTrend, getAnomalyDetail, getRecentEnergyReadings, addEnergyReading, deleteEnergyReading } from "../../services/api";
+import { getCachedData, setCachedData, clearCachedData } from "../../utils/dashboardCache";
 import "../../App.css";
 
 function SemiGauge({ percent, value, subLabel, color }) {
   const r = 80;
   const path = `M 20 100 A ${r} ${r} 0 0 1 180 100`;
   const length = Math.PI * r;
-  const offset = length * (1 - percent / 100);
-
+  const offset = length * (1 - Math.min(percent, 100) / 100);
   return (
     <svg width="200" height="120" viewBox="0 0 200 120">
       <path d={path} fill="none" stroke="#1F2A44" strokeWidth="14" strokeLinecap="round" />
-      <path d={path} fill="none" stroke={color} strokeWidth="14" strokeLinecap="round"
-        strokeDasharray={length} strokeDashoffset={offset} />
-      <text x="100" y="90" textAnchor="middle" fontFamily="JetBrains Mono" fontSize="26" fontWeight="700" fill="#E8ECF4">
-        {value}
-      </text>
-      <text x="100" y="110" textAnchor="middle" fontFamily="Inter" fontSize="11" fill="#8792A6">
-        {subLabel}
-      </text>
+      <path d={path} fill="none" stroke={color} strokeWidth="14" strokeLinecap="round" strokeDasharray={length} strokeDashoffset={offset} />
+      <text x="100" y="90" textAnchor="middle" fontFamily="JetBrains Mono" fontSize="26" fontWeight="700" fill="#E8ECF4">{value}</text>
+      <text x="100" y="110" textAnchor="middle" fontFamily="Inter" fontSize="11" fill="#8792A6">{subLabel}</text>
     </svg>
   );
 }
@@ -32,24 +27,45 @@ export default function EnergyDashboard() {
   const [anomalyData, setAnomalyData] = useState(null);
   const [monthlyTrend, setMonthlyTrend] = useState(null);
   const [selectedAnomaly, setSelectedAnomaly] = useState(null);
-  const [anomalyFilter, setAnomalyFilter] = useState("all"); // "all" | "spike" | "drop"
+  const [anomalyFilter, setAnomalyFilter] = useState("all");
   const [anomalySearch, setAnomalySearch] = useState("");
   const [newReading, setNewReading] = useState({ timestamp: "", power_consumption: "", outdoor_temp: "", occupancy: "" });
   const [recentReadings, setRecentReadings] = useState([]);
   const [addStatus, setAddStatus] = useState("");
 
+  const applyData = (d) => {
+    setAnalytics(d.analytics);
+    setRecommendations(d.recommendations);
+    setTempData(d.tempData);
+    setDayData(d.dayData);
+    setAnomalyData(d.anomalyData);
+    setMonthlyTrend(d.monthlyTrend);
+    setRecentReadings(d.recentReadings);
+  };
+
   const refreshAllData = () => {
-    getEnergyAnalytics().then(setAnalytics);
-    getEnergyRecommendations().then(setRecommendations);
-    getTemperatureCorrelation().then(setTempData);
-    getDayOfWeekBreakdown().then(setDayData);
-    getAnomalies().then(setAnomalyData);
-    getMonthlyTrend().then(setMonthlyTrend);
-    getRecentEnergyReadings().then(setRecentReadings);
+    Promise.all([
+      getEnergyAnalytics(),
+      getEnergyRecommendations(),
+      getTemperatureCorrelation(),
+      getDayOfWeekBreakdown(),
+      getAnomalies(),
+      getMonthlyTrend(),
+      getRecentEnergyReadings(),
+    ]).then(([analytics, recommendations, tempData, dayData, anomalyData, monthlyTrend, recentReadings]) => {
+      const bundle = { analytics, recommendations, tempData, dayData, anomalyData, monthlyTrend, recentReadings };
+      applyData(bundle);
+      setCachedData("energy", bundle);
+    });
   };
 
   useEffect(() => {
-    refreshAllData();
+    const cached = getCachedData("energy");
+    if (cached) {
+      applyData(cached);
+    } else {
+      refreshAllData();
+    }
   }, []);
 
   const handleAddReading = async () => {
@@ -57,6 +73,7 @@ export default function EnergyDashboard() {
     try {
       await addEnergyReading(newReading);
       setAddStatus("Added — refreshing dashboard...");
+      clearCachedData("energy");
       refreshAllData();
       setNewReading({ timestamp: "", power_consumption: "", outdoor_temp: "", occupancy: "" });
       setTimeout(() => setAddStatus(""), 2000);
@@ -69,6 +86,7 @@ export default function EnergyDashboard() {
   const handleDeleteReading = async (recordId) => {
     try {
       await deleteEnergyReading(recordId);
+      clearCachedData("energy");
       refreshAllData();
     } catch (err) {
       console.error(err);
@@ -111,7 +129,6 @@ export default function EnergyDashboard() {
         <span className="status-tag">● Live</span>
       </div>
 
-      {/* Row 1 */}
       <div className="dash-grid cols-3">
         <div className="panel gauge-card">
           <p className="panel-title">Avg vs Peak Load</p>
@@ -147,10 +164,8 @@ export default function EnergyDashboard() {
         </div>
       </div>
 
-      {/* Add / Remove Real Data panel */}
       <div className="panel" style={{ marginBottom: 16 }}>
         <p className="panel-title">Add / Remove Real Data</p>
-
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end", marginBottom: 16 }}>
           <div>
             <label className="stat-inline-label" style={{ display: "block", marginBottom: 6 }}>Timestamp</label>
@@ -207,7 +222,6 @@ export default function EnergyDashboard() {
         </div>
       </div>
 
-      {/* Row 2: small gauge + hourly trend chart, side by side */}
       <div className="dash-grid cols-gauge-chart">
         <div className="panel gauge-card">
           <p className="panel-title">Weekend Load</p>
@@ -234,7 +248,6 @@ export default function EnergyDashboard() {
         </div>
       </div>
 
-      {/* Row 3: bar chart + anomaly table */}
       <div className="dash-grid cols-2-even">
         {dayData && (
           <div className="panel">
@@ -357,7 +370,6 @@ export default function EnergyDashboard() {
         )}
       </div>
 
-      {/* Row 4: dual-line monthly trend overlay, full width */}
       {monthlyTrend && (
         <div className="panel chart-card">
           <p className="panel-title">Consumption vs. Outdoor Temperature — Monthly Trend</p>
@@ -378,10 +390,7 @@ export default function EnergyDashboard() {
               <YAxis yAxisId="left" stroke="#8792A6" fontSize={12} tickLine={false} axisLine={false} />
               <YAxis yAxisId="right" orientation="right" stroke="#8792A6" fontSize={12} tickLine={false} axisLine={false} />
               <Tooltip contentStyle={{ background: "#131B2E", border: "1px solid #1F2A44", borderRadius: 8, fontFamily: "Inter" }} />
-              <Legend
-                formatter={(value) => <span style={{ color: "#8792A6", fontSize: 12 }}>{value}</span>}
-                iconType="circle"
-              />
+              <Legend formatter={(value) => <span style={{ color: "#8792A6", fontSize: 12 }}>{value}</span>} iconType="circle" />
               <Area yAxisId="left" type="monotone" dataKey="avg_consumption" name="Consumption (kWh)" stroke="#F5B942" strokeWidth={2} fill="url(#fillConsumption)" />
               <Area yAxisId="right" type="monotone" dataKey="avg_temp" name="Outdoor Temp (°C)" stroke="#34D3C9" strokeWidth={2} fill="url(#fillTemp)" />
             </AreaChart>
@@ -389,7 +398,6 @@ export default function EnergyDashboard() {
         </div>
       )}
 
-      {/* Recommendations */}
       <div className="panel">
         <p className="panel-title">Efficiency Recommendations</p>
         <ul className="rec-list">

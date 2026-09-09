@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { getMaintenanceHealthScores, getMaintenanceAlerts, getMaintenanceRecommendations, getAssetDetail, addMaintenanceRecord, deleteMaintenanceRecord, getRecentMaintenanceRecords, getAssetList } from "../../services/api";
+import { getCachedData, setCachedData, clearCachedData } from "../../utils/dashboardCache";
 import "../../App.css";
 
 function healthColor(score) {
@@ -13,19 +14,13 @@ function SemiGauge({ percent, value, subLabel, color }) {
   const r = 80;
   const path = `M 20 100 A ${r} ${r} 0 0 1 180 100`;
   const length = Math.PI * r;
-  const offset = length * (1 - percent / 100);
-
+  const offset = length * (1 - Math.min(percent, 100) / 100);
   return (
     <svg width="200" height="120" viewBox="0 0 200 120">
       <path d={path} fill="none" stroke="#1F2A44" strokeWidth="14" strokeLinecap="round" />
-      <path d={path} fill="none" stroke={color} strokeWidth="14" strokeLinecap="round"
-        strokeDasharray={length} strokeDashoffset={offset} />
-      <text x="100" y="90" textAnchor="middle" fontFamily="JetBrains Mono" fontSize="26" fontWeight="700" fill="#E8ECF4">
-        {value}
-      </text>
-      <text x="100" y="110" textAnchor="middle" fontFamily="Inter" fontSize="11" fill="#8792A6">
-        {subLabel}
-      </text>
+      <path d={path} fill="none" stroke={color} strokeWidth="14" strokeLinecap="round" strokeDasharray={length} strokeDashoffset={offset} />
+      <text x="100" y="90" textAnchor="middle" fontFamily="JetBrains Mono" fontSize="26" fontWeight="700" fill="#E8ECF4">{value}</text>
+      <text x="100" y="110" textAnchor="middle" fontFamily="Inter" fontSize="11" fill="#8792A6">{subLabel}</text>
     </svg>
   );
 }
@@ -48,16 +43,35 @@ export default function MaintenanceDashboard() {
     machine_failure: false, failure_type: ""
   });
 
+  const applyData = (d) => {
+    setHealthScores(d.healthScores);
+    setAlerts(d.alerts);
+    setRecommendations(d.recommendations);
+    setRecentRecords(d.recentRecords);
+    setAssetOptions(d.assetOptions);
+  };
+
   const refreshAllData = () => {
-    getMaintenanceHealthScores().then(setHealthScores);
-    getMaintenanceAlerts().then(setAlerts);
-    getMaintenanceRecommendations().then(setRecommendations);
-    getRecentMaintenanceRecords().then(setRecentRecords);
-    getAssetList().then(setAssetOptions);
+    Promise.all([
+      getMaintenanceHealthScores(),
+      getMaintenanceAlerts(),
+      getMaintenanceRecommendations(),
+      getRecentMaintenanceRecords(),
+      getAssetList(),
+    ]).then(([healthScores, alerts, recommendations, recentRecords, assetOptions]) => {
+      const bundle = { healthScores, alerts, recommendations, recentRecords, assetOptions };
+      applyData(bundle);
+      setCachedData("maintenance", bundle);
+    });
   };
 
   useEffect(() => {
-    refreshAllData();
+    const cached = getCachedData("maintenance");
+    if (cached) {
+      applyData(cached);
+    } else {
+      refreshAllData();
+    }
   }, []);
 
   const openAssetDetail = async (assetId) => {
@@ -76,6 +90,7 @@ export default function MaintenanceDashboard() {
         failure_type: newRecord.machine_failure ? (newRecord.failure_type || "Unspecified") : null
       });
       setAddStatus("Added — refreshing dashboard...");
+      clearCachedData("maintenance");
       refreshAllData();
       setTimeout(() => setAddStatus(""), 2000);
     } catch (err) {
@@ -87,6 +102,7 @@ export default function MaintenanceDashboard() {
   const handleDeleteRecord = async (recordId) => {
     try {
       await deleteMaintenanceRecord(recordId);
+      clearCachedData("maintenance");
       refreshAllData();
     } catch (err) {
       console.error(err);
@@ -119,7 +135,6 @@ export default function MaintenanceDashboard() {
         <span className="status-tag">● Live</span>
       </div>
 
-      {/* Row 1 */}
       <div className="dash-grid cols-3">
         <div className="panel gauge-card">
           <p className="panel-title">Fleet Health</p>
@@ -155,10 +170,8 @@ export default function MaintenanceDashboard() {
         </div>
       </div>
 
-      {/* Add / Remove Real Data panel */}
       <div className="panel" style={{ marginBottom: 16 }}>
         <p className="panel-title">Add / Remove Real Data</p>
-
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end", marginBottom: 16 }}>
           <div>
             <label className="stat-inline-label" style={{ display: "block", marginBottom: 6 }}>Asset</label>
@@ -235,7 +248,6 @@ export default function MaintenanceDashboard() {
         </div>
       </div>
 
-      {/* Row 2: small gauge + health score bar chart, side by side */}
       <div className="dash-grid cols-gauge-chart">
         <div className="panel gauge-card">
           <p className="panel-title">Healthy Assets</p>
@@ -258,7 +270,6 @@ export default function MaintenanceDashboard() {
         </div>
       </div>
 
-      {/* Equipment status groups */}
       <div className="panel" style={{ marginBottom: 16 }}>
         <p className="panel-title">Equipment Status — Click for Details</p>
         <div className="status-group-grid">
@@ -303,7 +314,6 @@ export default function MaintenanceDashboard() {
         </div>
       </div>
 
-      {/* Row 3: high-risk readings, table-styled */}
       <div className="panel">
         <p className="panel-title">
           High-Risk Readings
@@ -348,7 +358,6 @@ export default function MaintenanceDashboard() {
         </div>
       </div>
 
-      {/* Recommendations */}
       <div className="panel">
         <p className="panel-title">Maintenance Recommendations</p>
         <ul className="rec-list">
@@ -358,7 +367,6 @@ export default function MaintenanceDashboard() {
         </ul>
       </div>
 
-      {/* Asset detail modal */}
       {selectedAsset && (
         <div className="modal-overlay" onClick={() => setSelectedAsset(null)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>

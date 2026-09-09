@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { PieChart, Pie, Cell, AreaChart, Area, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { getCostAnalytics, getCostDistribution, getCostTrend, getCategoryDetail, getFacilityHealthScore, getCostRecommendations, addCostEntry, deleteCostEntry, getRecentCostEntries } from "../../services/api";
+import { getCachedData, setCachedData, clearCachedData } from "../../utils/dashboardCache";
 import "../../App.css";
 
 const CATEGORY_COLORS = {
@@ -9,21 +10,6 @@ const CATEGORY_COLORS = {
   Security: "#8B5CF6",
   Administrative: "#34D3C9",
 };
-
-function SemiGauge({ percent, value, subLabel, color }) {
-  const r = 80;
-  const path = `M 20 100 A ${r} ${r} 0 0 1 180 100`;
-  const length = Math.PI * r;
-  const offset = length * (1 - Math.min(percent, 100) / 100);
-  return (
-    <svg width="200" height="120" viewBox="0 0 200 120">
-      <path d={path} fill="none" stroke="#1F2A44" strokeWidth="14" strokeLinecap="round" />
-      <path d={path} fill="none" stroke={color} strokeWidth="14" strokeLinecap="round" strokeDasharray={length} strokeDashoffset={offset} />
-      <text x="100" y="90" textAnchor="middle" fontFamily="JetBrains Mono" fontSize="26" fontWeight="700" fill="#E8ECF4">{value}</text>
-      <text x="100" y="110" textAnchor="middle" fontFamily="Inter" fontSize="11" fill="#8792A6">{subLabel}</text>
-    </svg>
-  );
-}
 
 export default function CostDashboard() {
   const [analytics, setAnalytics] = useState(null);
@@ -37,22 +23,45 @@ export default function CostDashboard() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [categoryDetail, setCategoryDetail] = useState(null);
 
-  const refreshAllData = () => {
-    getCostAnalytics().then(setAnalytics);
-    getCostDistribution().then(setDistribution);
-    getCostTrend().then(setTrend);
-    getFacilityHealthScore().then(setHealth);
-    getCostRecommendations().then(setRecommendations);
-    getRecentCostEntries().then(setRecentEntries);
+  const applyData = (d) => {
+    setAnalytics(d.analytics);
+    setDistribution(d.distribution);
+    setTrend(d.trend);
+    setHealth(d.health);
+    setRecommendations(d.recommendations);
+    setRecentEntries(d.recentEntries);
   };
 
-  useEffect(() => { refreshAllData(); }, []);
+  const refreshAllData = () => {
+    Promise.all([
+      getCostAnalytics(),
+      getCostDistribution(),
+      getCostTrend(),
+      getFacilityHealthScore(),
+      getCostRecommendations(),
+      getRecentCostEntries(),
+    ]).then(([analytics, distribution, trend, health, recommendations, recentEntries]) => {
+      const bundle = { analytics, distribution, trend, health, recommendations, recentEntries };
+      applyData(bundle);
+      setCachedData("cost", bundle);
+    });
+  };
+
+  useEffect(() => {
+    const cached = getCachedData("cost");
+    if (cached) {
+      applyData(cached);
+    } else {
+      refreshAllData();
+    }
+  }, []);
 
   const handleAddEntry = async () => {
     setAddStatus("Adding...");
     try {
       await addCostEntry({ ...newEntry, amount: Number(newEntry.amount) });
       setAddStatus("Added — refreshing dashboard...");
+      clearCachedData("cost");
       refreshAllData();
       setNewEntry({ category: "energy", amount: "", period: "", description: "" });
       setTimeout(() => setAddStatus(""), 2000);
@@ -65,6 +74,7 @@ export default function CostDashboard() {
   const handleDeleteEntry = async (entryId) => {
     try {
       await deleteCostEntry(entryId);
+      clearCachedData("cost");
       refreshAllData();
     } catch (err) {
       console.error(err);
@@ -86,7 +96,7 @@ export default function CostDashboard() {
     fullMark: 100
   }));
 
-  const potentialSavings = Math.round(analytics.total_cost * 0.08); // illustrative estimate based on top-category optimization
+  const potentialSavings = Math.round(analytics.total_cost * 0.08);
 
   return (
     <div className="dashboard">
@@ -95,7 +105,6 @@ export default function CostDashboard() {
         <span className="status-tag">● Live</span>
       </div>
 
-      {/* KPI Row */}
       <div className="dash-grid cols-4-even" style={{ marginBottom: 16 }}>
         <div className="panel">
           <p className="stat-label">Total Operational Cost</p>
@@ -117,7 +126,6 @@ export default function CostDashboard() {
         </div>
       </div>
 
-      {/* Add / Remove Real Data */}
       <div className="panel" style={{ marginBottom: 16 }}>
         <p className="panel-title">Add / Remove Cost Entry</p>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end", marginBottom: 16 }}>
@@ -177,7 +185,6 @@ export default function CostDashboard() {
         </div>
       </div>
 
-      {/* Cost Distribution (Pie) + Facility Health (Radar) */}
       <div className="dash-grid cols-2-even">
         <div className="panel">
           <p className="panel-title">Cost Distribution</p>
@@ -208,7 +215,6 @@ export default function CostDashboard() {
         </div>
       </div>
 
-      {/* Cost Trend, full width */}
       <div className="panel chart-card">
         <p className="panel-title">Monthly Cost Trend</p>
         <ResponsiveContainer width="100%" height={260}>
@@ -228,7 +234,6 @@ export default function CostDashboard() {
         </ResponsiveContainer>
       </div>
 
-      {/* Cost Breakdown Table — click to detail */}
       <div className="panel" style={{ marginBottom: 16 }}>
         <p className="panel-title">Cost Breakdown — Click for Details</p>
         <table className="data-table">
@@ -248,7 +253,6 @@ export default function CostDashboard() {
         </table>
       </div>
 
-      {/* Recommendations */}
       <div className="panel">
         <p className="panel-title">Cost-Saving Recommendations</p>
         <ul className="rec-list">
@@ -256,7 +260,6 @@ export default function CostDashboard() {
         </ul>
       </div>
 
-      {/* Category detail modal */}
       {selectedCategory && (
         <div className="modal-overlay" onClick={() => setSelectedCategory(null)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>

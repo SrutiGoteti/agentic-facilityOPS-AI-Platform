@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { getSecurityAnalytics, getSecurityEventsByType, getSecurityTimeline, getAfterHoursEvents, getSecurityRecommendations, addSecurityEvent, deleteSecurityEvent, getRecentSecurityEvents, getEventsByLocation } from "../../services/api";
+import { getCachedData, setCachedData, clearCachedData } from "../../utils/dashboardCache";
 import "../../App.css";
 
 const LOCATIONS = ["Main Entrance", "Server Room", "Rear Exit", "Parking Lot", "Loading Dock"];
@@ -25,23 +26,47 @@ export default function SecurityDashboard() {
   const [newEvent, setNewEvent] = useState({ timestamp: "", location: LOCATIONS[0], event_type: EVENT_TYPES[0], severity: "medium", resolved: false });
   const [eventsByLocation, setEventsByLocation] = useState(null);
 
-  const refreshAllData = () => {
-    getSecurityAnalytics().then(setAnalytics);
-    getSecurityEventsByType().then(setByType);
-    getSecurityTimeline().then(setTimeline);
-    getAfterHoursEvents().then(setAfterHours);
-    getSecurityRecommendations().then(setRecommendations);
-    getRecentSecurityEvents().then(setRecentEvents);
-    getEventsByLocation().then(setEventsByLocation);
+  const applyData = (d) => {
+    setAnalytics(d.analytics);
+    setByType(d.byType);
+    setTimeline(d.timeline);
+    setAfterHours(d.afterHours);
+    setRecommendations(d.recommendations);
+    setRecentEvents(d.recentEvents);
+    setEventsByLocation(d.eventsByLocation);
   };
 
-  useEffect(() => { refreshAllData(); }, []);
+  const refreshAllData = () => {
+    Promise.all([
+      getSecurityAnalytics(),
+      getSecurityEventsByType(),
+      getSecurityTimeline(),
+      getAfterHoursEvents(),
+      getSecurityRecommendations(),
+      getRecentSecurityEvents(),
+      getEventsByLocation(),
+    ]).then(([analytics, byType, timeline, afterHours, recommendations, recentEvents, eventsByLocation]) => {
+      const bundle = { analytics, byType, timeline, afterHours, recommendations, recentEvents, eventsByLocation };
+      applyData(bundle);
+      setCachedData("security", bundle);
+    });
+  };
+
+  useEffect(() => {
+    const cached = getCachedData("security");
+    if (cached) {
+      applyData(cached);
+    } else {
+      refreshAllData();
+    }
+  }, []);
 
   const handleAddEvent = async () => {
     setAddStatus("Adding...");
     try {
       await addSecurityEvent(newEvent);
       setAddStatus("Added — refreshing dashboard...");
+      clearCachedData("security");
       refreshAllData();
       setTimeout(() => setAddStatus(""), 2000);
     } catch (err) {
@@ -53,6 +78,7 @@ export default function SecurityDashboard() {
   const handleDeleteEvent = async (eventId) => {
     try {
       await deleteSecurityEvent(eventId);
+      clearCachedData("security");
       refreshAllData();
     } catch (err) {
       console.error(err);
@@ -76,7 +102,6 @@ export default function SecurityDashboard() {
         <span className="status-tag">● Live</span>
       </div>
 
-      {/* Row 1 */}
       <div className="dash-grid cols-3">
         <div className="panel">
           <p className="panel-title">Overview</p>
@@ -119,7 +144,6 @@ export default function SecurityDashboard() {
         </div>
       </div>
 
-      {/* Add / Remove Real Data */}
       <div className="panel" style={{ marginBottom: 16 }}>
         <p className="panel-title">Add / Remove Real Data</p>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end", marginBottom: 16 }}>
@@ -180,7 +204,6 @@ export default function SecurityDashboard() {
         </div>
       </div>
 
-      {/* Events by type + timeline + location */}
       <div className="dash-grid cols-3">
         <div className="panel">
           <p className="panel-title">Events by Type</p>
@@ -222,7 +245,6 @@ export default function SecurityDashboard() {
         </div>
       </div>
 
-      {/* After-hours events table */}
       {afterHours && (
         <div className="panel">
           <p className="panel-title">
@@ -261,7 +283,6 @@ export default function SecurityDashboard() {
         </div>
       )}
 
-      {/* Recommendations */}
       <div className="panel">
         <p className="panel-title">Security Recommendations</p>
         <ul className="rec-list">

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { getOccupancyAnalytics, getOccupancyHeatmap, getRoomComparison, getOvercrowdingEvents, getOccupancyDayOfWeek, getOccupancyRecommendations, addOccupancyRecord, deleteOccupancyRecord, getRecentOccupancyRecords, getOccupancyRoomList } from "../../services/api";
+import { getCachedData, setCachedData, clearCachedData } from "../../utils/dashboardCache";
 import "../../App.css";
 
 function getHeatColor(peakPct) {
@@ -38,19 +39,41 @@ export default function OccupancyDashboard() {
   const [addStatus, setAddStatus] = useState("");
   const [newRecord, setNewRecord] = useState({ room_id: "", timestamp: "", headcount: "" });
 
+  const applyData = (d) => {
+    setAnalytics(d.analytics);
+    setHeatmap(d.heatmap);
+    setRoomComparison(d.roomComparison);
+    setOvercrowding(d.overcrowding);
+    setDayData(d.dayData);
+    setRecommendations(d.recommendations);
+    setRecentRecords(d.recentRecords);
+    setRoomOptions(d.roomOptions);
+  };
+
   const refreshAllData = () => {
-    getOccupancyAnalytics().then(setAnalytics);
-    getOccupancyHeatmap().then(setHeatmap);
-    getRoomComparison().then(setRoomComparison);
-    getOvercrowdingEvents().then(setOvercrowding);
-    getOccupancyDayOfWeek().then(setDayData);
-    getOccupancyRecommendations().then(setRecommendations);
-    getRecentOccupancyRecords().then(setRecentRecords);
-    getOccupancyRoomList().then(setRoomOptions);
+    Promise.all([
+      getOccupancyAnalytics(),
+      getOccupancyHeatmap(),
+      getRoomComparison(),
+      getOvercrowdingEvents(),
+      getOccupancyDayOfWeek(),
+      getOccupancyRecommendations(),
+      getRecentOccupancyRecords(),
+      getOccupancyRoomList(),
+    ]).then(([analytics, heatmap, roomComparison, overcrowding, dayData, recommendations, recentRecords, roomOptions]) => {
+      const bundle = { analytics, heatmap, roomComparison, overcrowding, dayData, recommendations, recentRecords, roomOptions };
+      applyData(bundle);
+      setCachedData("occupancy", bundle);
+    });
   };
 
   useEffect(() => {
-    refreshAllData();
+    const cached = getCachedData("occupancy");
+    if (cached) {
+      applyData(cached);
+    } else {
+      refreshAllData();
+    }
   }, []);
 
   const handleAddRecord = async () => {
@@ -58,6 +81,7 @@ export default function OccupancyDashboard() {
     try {
       await addOccupancyRecord({ ...newRecord, room_id: Number(newRecord.room_id), headcount: Number(newRecord.headcount) });
       setAddStatus("Added — refreshing dashboard...");
+      clearCachedData("occupancy");
       refreshAllData();
       setNewRecord({ room_id: "", timestamp: "", headcount: "" });
       setTimeout(() => setAddStatus(""), 2000);
@@ -70,6 +94,7 @@ export default function OccupancyDashboard() {
   const handleDeleteRecord = async (recordId) => {
     try {
       await deleteOccupancyRecord(recordId);
+      clearCachedData("occupancy");
       refreshAllData();
     } catch (err) {
       console.error(err);
@@ -89,7 +114,6 @@ export default function OccupancyDashboard() {
         <span className="status-tag">● Live</span>
       </div>
 
-      {/* Row 1 */}
       <div className="dash-grid cols-3">
         <div className="panel gauge-card">
           <p className="panel-title">Avg Utilization</p>
@@ -119,7 +143,6 @@ export default function OccupancyDashboard() {
         </div>
       </div>
 
-      {/* Add / Remove Real Data */}
       <div className="panel" style={{ marginBottom: 16 }}>
         <p className="panel-title">Add / Remove Real Data</p>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end", marginBottom: 16 }}>
@@ -173,27 +196,25 @@ export default function OccupancyDashboard() {
         </div>
       </div>
 
-      {/* Heatmap */}
-<div className="panel" style={{ marginBottom: 16 }}>
-  <p className="panel-title">Room Utilization Heatmap</p>
-  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
-    {heatmap.map(room => {
-  const c = getHeatColor(room.peak_utilization);
-  return (
-    <div key={room.room_id} style={{
-      background: c.bg, border: `1px solid ${c.border}`, borderRadius: 10, padding: "16px 14px"
-    }}>
-      <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6, color: "#E8ECF4" }}>{room.room_name}</div>
-      <div style={{ fontFamily: "JetBrains Mono", fontSize: 24, fontWeight: 700, color: c.border }}>{room.avg_utilization}%</div>
-      <div style={{ fontSize: 11, fontWeight: 600, color: c.labelColor, marginTop: 4 }}>{c.label}</div>
-      <div style={{ fontSize: 11, opacity: 0.7, color: "#8792A6", marginTop: 2 }}>peak {room.peak_utilization}% · {room.overcrowding_count} events</div>
-    </div>
-  );
-})}
-  </div>
-</div>
+      <div className="panel" style={{ marginBottom: 16 }}>
+        <p className="panel-title">Room Utilization Heatmap</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
+          {heatmap.map(room => {
+            const c = getHeatColor(room.peak_utilization);
+            return (
+              <div key={room.room_id} style={{
+                background: c.bg, border: `1px solid ${c.border}`, borderRadius: 10, padding: "16px 14px"
+              }}>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6, color: "#E8ECF4" }}>{room.room_name}</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 24, fontWeight: 700, color: c.border }}>{room.avg_utilization}%</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: c.labelColor, marginTop: 4 }}>{c.label}</div>
+                <div style={{ fontSize: 11, opacity: 0.7, color: "#8792A6", marginTop: 2 }}>peak {room.peak_utilization}% · {room.overcrowding_count} events</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
-      {/* Room comparison + day-of-week */}
       <div className="dash-grid cols-2-even">
         <div className="panel">
           <p className="panel-title">Average Utilization by Room</p>
@@ -224,7 +245,6 @@ export default function OccupancyDashboard() {
         )}
       </div>
 
-      {/* Overcrowding events table */}
       {overcrowding && (
         <div className="panel">
           <p className="panel-title">
@@ -257,7 +277,6 @@ export default function OccupancyDashboard() {
         </div>
       )}
 
-      {/* Recommendations */}
       <div className="panel">
         <p className="panel-title">Occupancy Recommendations</p>
         <ul className="rec-list">
