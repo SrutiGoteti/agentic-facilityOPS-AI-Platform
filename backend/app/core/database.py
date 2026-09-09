@@ -3,7 +3,7 @@ from sqlalchemy.orm import sessionmaker
 from app.models.db_models import Base
 import os
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./persistent_data/facilityops.db")
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./facilityops.db")
 
 engine = create_engine(DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(bind=engine)
